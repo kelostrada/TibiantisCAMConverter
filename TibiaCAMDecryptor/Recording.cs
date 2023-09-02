@@ -23,45 +23,25 @@ namespace TibiaCAMDecryptor {
         public void Parse() {
             FileBuffer = File.ReadAllBytes(FilePath);
             BinaryReader br = new BinaryReader(new MemoryStream(FileBuffer));
-            byte fileVersionByte = br.ReadByte();
-            if (fileVersionByte != 3) {
-                Console.WriteLine("Wrong file version! [" + FilePath + "]");
-                Console.ReadLine();
-                IsValid = false;
-                HasProblem = true;
-                return;
-            }
 
-            byte fileCompressionVersionByte = br.ReadByte();
-            if (fileCompressionVersionByte != 1 && fileCompressionVersionByte != 2) {
-                Console.WriteLine("Unknown compression! [" + FilePath + "]");
-                Console.ReadLine();
-                IsValid = false;
-                HasProblem = true;
-                return;
-            }
+            br.ReadUInt32();
+            br.ReadUInt32();
+            br.ReadUInt32();
 
-            uint packetCount = br.ReadUInt32();
-            if (fileCompressionVersionByte == 2)
-                packetCount -= 57;
-
-            if (packetCount == 0) {
-                Console.WriteLine("Empty recording file! [" + FilePath + "]");
-                Console.ReadLine();
-                IsValid = false;
-                HasProblem = true;
-                return;
-            }
+            int index = 0;
 
             try {
-                for (int index = 0; index < packetCount; index++) {
-                    uint packetLength = 0;
-                    if (fileCompressionVersionByte == 1)
-                        packetLength = br.ReadUInt32();
-                    else if (fileCompressionVersionByte == 2)
-                        packetLength = br.ReadUInt16();
+                while(br.BaseStream.Position < br.BaseStream.Length) {
 
-                    if (packetLength == 0) {
+                    uint packetTime = br.ReadUInt32();
+
+                    // zeroes?
+                    var zeroes = br.ReadUInt32();
+
+                    uint packetLength = br.ReadUInt16();
+
+                    if (packetLength == 0)
+                    {
                         Console.WriteLine("Invalid packet length! PacketID: " + index + " [" + FilePath + "]");
                         Packets.Clear();
                         IsValid = false;
@@ -69,26 +49,12 @@ namespace TibiaCAMDecryptor {
                         break;
                     }
 
-                    uint packetTime = br.ReadUInt32();
-
                     // get packet data
                     byte[] packetData = br.ReadBytes((int)packetLength);
 
-                    // adler checksum
-                    uint packetDataChecksum = Tools.AdlerChecksum((uint)packetData.Length, packetData);
-                    uint packetChecksumFile = br.ReadUInt32();
-
-                    if (packetDataChecksum != packetChecksumFile) {
-                        Console.WriteLine("Invalid checksum! PacketID: " + index + " [" + FilePath + "]");
-                        Packets.Clear();
-                        IsValid = false;
-                        HasProblem = true;
-                        break;
-                    }
-
-                    // decrypt packet
-                    Decrypt(ref packetData, packetTime);
                     Packets.Add(new Packet(packetData, packetLength, packetTime));
+
+                    index++;
                 }
             } catch (Exception ex) {
                 IsValid = false;

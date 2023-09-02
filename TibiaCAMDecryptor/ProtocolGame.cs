@@ -9,12 +9,19 @@ using System.Threading.Tasks;
 namespace TibiaCAMDecryptor {
     public class ProtocolGame {
         public static void ParsePacket(Recording recording, Packet packet) {
+
+            //if (packet.PacketTime == 137309718)
+            //{
+            //    Console.WriteLine($"Debugging... {packet}");
+            //}96 C2 4F 95 01 B3 0D 4F 00 00 00 00 00
+
             byte[] packetData = packet.GetPacketData();
             InputMessage inputMessage = new InputMessage(packetData);
             byte lastPacketHead = 0;
             try {
                 while (inputMessage.getPosition() < inputMessage.getLength()) {
                     byte packetHead = inputMessage.getByte();
+                    int currentPosition = inputMessage.getPosition();
                     switch (packetHead) {
                         case 0xA:
                             ParseLogin(inputMessage);
@@ -187,13 +194,16 @@ namespace TibiaCAMDecryptor {
                             ParseVIPLogout(inputMessage);
                             break;
                         default:
-                            throw new Exception("Invalid packet head (maybe different version?)");
+                            throw new Exception($"Invalid packet head (maybe different version?) Packet: 0x{packetHead.ToString("X")}|{packetHead}");
                     }
 
+                    //Console.WriteLine($"Parsed packet: 0x{packetHead:X}|{packetHead}, position: {currentPosition}");
                     lastPacketHead = packetHead;
                 }
+
+                //Console.WriteLine("Finished reading packet");
             } catch (Exception ex) {
-                //Console.WriteLine("Corrupted packet.");
+                Console.WriteLine($"Corrupted packet: {ex.Message}, time: {packet.PacketTime}, packet: {packet}");
                 recording.HasProblem = true;
             }
         }
@@ -269,7 +279,7 @@ namespace TibiaCAMDecryptor {
             input.getU32();
             input.getU16();
             input.getU16();
-            input.getString();
+            var text = input.getString();
         }
 
         private static void ParseCreatureSkull(InputMessage input) {
@@ -439,7 +449,7 @@ namespace TibiaCAMDecryptor {
         }
 
         private static void ParseCreatureSpeak(InputMessage input) {
-            //input.getU32();
+            input.getU32();
             input.getString();
 
             byte type = input.getByte();
@@ -603,8 +613,8 @@ namespace TibiaCAMDecryptor {
         }
 
         private static void ParseTextMessage(InputMessage input) {
-            input.getByte();
-            input.getString();
+            var a = input.getByte();
+            var b = input.getString();
         }
 
         private static void ParseVIP(InputMessage input) {
@@ -642,6 +652,9 @@ namespace TibiaCAMDecryptor {
             input.getU16();
             input.getByte();
             input.getByte();
+
+            // ??
+            input.getU16();
         }
 
         private static void ParseInventoryItem(InputMessage input, byte packetHead) {
@@ -745,11 +758,13 @@ namespace TibiaCAMDecryptor {
             //get thing type
             var thingId = message.getU16();
 
-            if (thingId == 0x0061 || thingId == 0x0062) {
+            if (thingId == 0x0061 || thingId == 0x0062)
+            {
                 //Console.WriteLine("Creature baby.");
                 //creatures
                 Creature creature = null;
-                if (thingId == 0x0062) {
+                if (thingId == 0x0062)
+                {
                     uint creatureId = message.getU32();
                     creature = new Creature(creatureId);
                     if (creature == null)
@@ -757,7 +772,9 @@ namespace TibiaCAMDecryptor {
 
                     byte creatureHealth = message.getByte();
                     //Console.WriteLine("Creature with id: " + creatureId + " Life: " + creatureHealth);
-                } else if (thingId == 0x0061) { //creature is not known
+                }
+                else if (thingId == 0x0061)
+                { //creature is not known
                     uint creatureId = message.getU32();
                     //Console.WriteLine("Removing creature: " + creatureId);
                     uint creatureIdNew = message.getU32();
@@ -773,12 +790,15 @@ namespace TibiaCAMDecryptor {
                 creature.Outfit = message.getOutfit();
                 creature.LightLevel = message.getByte();
                 creature.LightColor = message.getByte();
+
                 creature.Speed = message.getU16();
                 creature.Skull = message.getByte();
                 creature.Shield = message.getByte();
 
                 return creature;
-            } else if (thingId == 0x0063) {
+            }
+            else if (thingId == 0x0063)
+            {
                 uint creatureId = message.getU32();
                 Creature creature = new Creature(creatureId);
                 if (creature == null)
@@ -787,7 +807,8 @@ namespace TibiaCAMDecryptor {
                 creature.TurnDirection = (Direction)message.getByte();
 
                 return creature;
-            } else
+            }
+            else
                 return GetItem(message, thingId);
         }
 

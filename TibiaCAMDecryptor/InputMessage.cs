@@ -54,8 +54,16 @@ namespace TibiaCAMDecryptor {
         public Outfit getOutfit() {
             var lookType = getByte();
             if (lookType != 0)
-                return new Outfit(lookType, getByte(), getByte(), getByte(),
+            {
+                var outfit = new Outfit(lookType, getByte(), getByte(), getByte(),
                     getByte());
+
+                // something else? probably addons?
+                var addon = getByte();
+                //Console.WriteLine($"Additional outfit byte: {addon}");
+
+                return outfit;
+            }
             else
                 return new Outfit(lookType, getU16());
         }

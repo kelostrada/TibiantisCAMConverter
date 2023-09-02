@@ -13,15 +13,20 @@ namespace TibiaCAMDecryptor {
             PacketData = packetData;
             PacketLength = packetLen;
             // get length from packetData
-            PacketLength = BitConverter.ToUInt16(packetData, 0);
+            //PacketLength = BitConverter.ToUInt16(packetData, 0);
             PacketTime = packetTime;
         }
 
         // skip the 2 bytes of length
         public byte[] GetPacketData() {
             byte[] newPacketData = new byte[PacketLength];
-            Array.Copy(PacketData, 2, newPacketData, 0, PacketLength);
+            Array.Copy(PacketData, 0, newPacketData, 0, PacketLength);
             return newPacketData;
+        }
+
+        public override string ToString()
+        {
+            return PacketData.Select(i => $"{i:X2}").Aggregate("", (acc, s) => $"{acc} {s}");
         }
     }
 }

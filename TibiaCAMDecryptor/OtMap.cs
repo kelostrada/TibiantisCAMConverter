@@ -201,7 +201,7 @@ namespace TibiaCAMDecryptor {
                 writer.Write(Width);
                 writer.Write(Height);
                 writer.Write(Items.MajorVersion);
-                writer.Write(Items.MinorVersion);
+                writer.Write((uint)3);
 
                 //Map Data
                 writer.WriteNodeStart((byte)OtMapNodeTypes.MAP_DATA);

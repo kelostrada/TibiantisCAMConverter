@@ -18,9 +18,10 @@ namespace TibiaCAMDecryptor {
             Instance.Map.Updated += ProtocolGame.Map_Updated;
 
             Instance.items = new Items();
-            Instance.items.Load("Tibia.dat", 740);
+            Instance.items.Load("Tibia.dat", 760);
             //get all recordings
             foreach (string filePath in Directory.GetFiles("Recordings")) {
+                if (filePath.EndsWith(".DS_Store")) continue;
                 //Console.WriteLine("Parsing record: " + Path.GetFileName(filePath));
                 Recording recording = new Recording(filePath);
                 recording.Parse();
