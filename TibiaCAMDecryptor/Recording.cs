@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace TibiaCAMDecryptor {
@@ -12,12 +13,19 @@ namespace TibiaCAMDecryptor {
         public bool IsValid { get; set; }
         public Location Location { get; internal set; }
         public bool HasProblem { get; internal set; }
+        public String Time { get; set; }
 
         public List<Packet> Packets = new List<Packet>();
         public Recording(string filePath) {
             FilePath = filePath;
             IsValid = true;
             HasProblem = false;
+            string pattern = @".*\/\d{4}-\d{2}-\d{2}-(\d{2})-(\d{2})-(\d{2})\.cam";
+            Match m = Regex.Match(filePath, pattern, RegexOptions.IgnoreCase);
+            var g1 = m.Groups[1];
+            var g2 = m.Groups[2];
+            var g3 = m.Groups[3];
+            Time = $"{g1.Captures[0].Value}:{g2.Captures[0].Value}:{g3.Captures[0].Value}";
         }
 
         public void Parse() {

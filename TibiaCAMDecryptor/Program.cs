@@ -29,6 +29,25 @@ namespace TibiaCAMDecryptor {
                     recordings.Add(recording);
             }
 
+            recordings.Sort((r1, r2) => {
+                if (r1.Time.CompareTo("09:10:00") > 0 && r2.Time.CompareTo("09:10:00") > 0)
+                {
+                    return r1.Time.CompareTo(r2.Time);
+                }
+
+                if (r1.Time.CompareTo("09:10:00") > 0)
+                {
+                    return -1;
+                }
+
+                if (r2.Time.CompareTo("09:10:00") > 0)
+                {
+                    return 1;
+                }
+
+                return r1.Time.CompareTo(r2.Time);
+            });
+
             //Console.WriteLine("Reading map from packets.");
 
             // parse packets
@@ -40,11 +59,11 @@ namespace TibiaCAMDecryptor {
 
                 foreach (Packet packet in recording.Packets) {
                     ProtocolGame.ParsePacket(recording, packet);
-                }                
+                }
 
-                Console.WriteLine("Parsed: " + recording.FilePath);
-                if (recording.Location != null)
-                    Console.WriteLine(recording.Location.X + "," + recording.Location.Y + "," + recording.Location.Z);
+                Console.WriteLine($"Parsed Recording: time: {recording.Time}, player: {Player.name}, File: {recording.FilePath}");
+                //if (recording.Location != null)
+                //    Console.WriteLine(recording.Location.X + "," + recording.Location.Y + "," + recording.Location.Z);
             }
 
             Console.WriteLine("Done parsing packets... saving map...");

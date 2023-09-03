@@ -201,7 +201,7 @@ namespace TibiaCAMDecryptor {
                     lastPacketHead = packetHead;
                 }
 
-                //Console.WriteLine("Finished reading packet");
+                //Console.WriteLine($"Finished reading packet, player: {Player.name}, time: {packet.PacketTime}");
             } catch (Exception ex) {
                 Console.WriteLine($"Corrupted packet: {ex.Message}, time: {packet.PacketTime}, packet: {packet}");
                 recording.HasProblem = true;
@@ -745,7 +745,7 @@ namespace TibiaCAMDecryptor {
             Tile tile = new Tile(location);
 
             while (message.PeekU16() < 0xFF00)
-                tile.AddThing(GetThing(message));
+                tile.AddThing(GetThing(message, location));
 
             //Console.WriteLine("Tile added: things count = " + tile.things.Count);
             if (Instance.Map.GetTile(location) == null)
@@ -754,7 +754,7 @@ namespace TibiaCAMDecryptor {
             return tile;
         }
 
-        private static Thing GetThing(InputMessage message) {
+        private static Thing GetThing(InputMessage message, Location location = null) {
             //get thing type
             var thingId = message.getU16();
 
@@ -781,6 +781,11 @@ namespace TibiaCAMDecryptor {
                     creature = new Creature(creatureIdNew);
                     creature.Name = message.getString();
                     creature.Health = message.getByte();
+
+                    if (Player.location.Equals(location))
+                    {
+                        Player.name = creature.Name;
+                    }
                 }
 
                 var direction = (Direction)message.getByte();

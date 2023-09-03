@@ -7,5 +7,6 @@ using System.Threading.Tasks;
 namespace TibiaCAMDecryptor {
     public class Player {
         public static Location location = new Location(65535, 65535, 255);
+        public static string name = "";
     }
 }
