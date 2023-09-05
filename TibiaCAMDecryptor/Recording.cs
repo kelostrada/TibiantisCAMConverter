@@ -20,12 +20,12 @@ namespace TibiaCAMDecryptor {
             FilePath = filePath;
             IsValid = true;
             HasProblem = false;
-            string pattern = @".*\/\d{4}-\d{2}-\d{2}-(\d{2})-(\d{2})-(\d{2})\.cam";
-            Match m = Regex.Match(filePath, pattern, RegexOptions.IgnoreCase);
-            var g1 = m.Groups[1];
-            var g2 = m.Groups[2];
-            var g3 = m.Groups[3];
-            Time = $"{g1.Captures[0].Value}:{g2.Captures[0].Value}:{g3.Captures[0].Value}";
+            //string pattern = @".*\/\d{4}-\d{2}-\d{2}-(\d{2})-(\d{2})-(\d{2})\.cam";
+            //Match m = Regex.Match(filePath, pattern, RegexOptions.IgnoreCase);
+            //var g1 = m.Groups[1];
+            //var g2 = m.Groups[2];
+            //var g3 = m.Groups[3];
+            //Time = $"{g1.Captures[0].Value}:{g2.Captures[0].Value}:{g3.Captures[0].Value}";
         }
 
         public void Parse() {

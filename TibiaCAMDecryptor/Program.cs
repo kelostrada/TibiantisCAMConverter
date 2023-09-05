@@ -29,24 +29,24 @@ namespace TibiaCAMDecryptor {
                     recordings.Add(recording);
             }
 
-            recordings.Sort((r1, r2) => {
-                if (r1.Time.CompareTo("09:10:00") > 0 && r2.Time.CompareTo("09:10:00") > 0)
-                {
-                    return r1.Time.CompareTo(r2.Time);
-                }
+            //recordings.Sort((r1, r2) => {
+            //    if (r1.Time.CompareTo("09:10:00") > 0 && r2.Time.CompareTo("09:10:00") > 0)
+            //    {
+            //        return r1.Time.CompareTo(r2.Time);
+            //    }
 
-                if (r1.Time.CompareTo("09:10:00") > 0)
-                {
-                    return -1;
-                }
+            //    if (r1.Time.CompareTo("09:10:00") > 0)
+            //    {
+            //        return -1;
+            //    }
 
-                if (r2.Time.CompareTo("09:10:00") > 0)
-                {
-                    return 1;
-                }
+            //    if (r2.Time.CompareTo("09:10:00") > 0)
+            //    {
+            //        return 1;
+            //    }
 
-                return r1.Time.CompareTo(r2.Time);
-            });
+            //    return r1.Time.CompareTo(r2.Time);
+            //});
 
             //Console.WriteLine("Reading map from packets.");
 
