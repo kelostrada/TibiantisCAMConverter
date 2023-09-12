@@ -54,7 +54,7 @@ namespace TibiaCAMDecryptor {
         }
 
         public override string ToString() {
-            return "LookType: " + LookType.ToString();
+            return "LookType: " + LookType.ToString() + (LookType != 0 ? $" [{head} {body} {legs} {feet}]" : $"[{lookItem}]");
         }
 
         public override bool Equals(object obj) {

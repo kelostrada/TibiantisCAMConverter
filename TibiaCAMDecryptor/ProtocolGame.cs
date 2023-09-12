@@ -1,31 +1,39 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
-namespace TibiaCAMDecryptor {
-    public class ProtocolGame {
-        public static void ParsePacket(Recording recording, Packet packet) {
+namespace TibiaCAMDecryptor
+{
+    public class ProtocolGame
+    {
+        private static Dictionary<string, string> CurrentPacketInfo = new Dictionary<string, string>();
 
-            //if (packet.PacketTime == 137309718)
-            //{
-            //    Console.WriteLine($"Debugging... {packet}");
-            //}96 C2 4F 95 01 B3 0D 4F 00 00 00 00 00
+        private static string CurrentPacketInfoLog()
+        {
+            return CurrentPacketInfo.Aggregate("", (acc, kv) => $"{kv.Key}: {kv.Value}, {acc}");
+        }
 
+        public static void ParsePacket(Recording recording, Packet packet)
+        {
             byte[] packetData = packet.GetPacketData();
+
             InputMessage inputMessage = new InputMessage(packetData);
             byte lastPacketHead = 0;
-            try {
-                while (inputMessage.getPosition() < inputMessage.getLength()) {
+            try
+            {
+                while (inputMessage.getPosition() < inputMessage.getLength())
+                {
+                    CurrentPacketInfo = new Dictionary<string, string>();
                     byte packetHead = inputMessage.getByte();
                     int currentPosition = inputMessage.getPosition();
-                    switch (packetHead) {
+                    switch (packetHead)
+                    {
                         case 0xA:
                             ParseLogin(inputMessage);
                             break;
+                        /*case 0x0B:
+                            ParseGmActions(inputMessage);
+                            break;*/
                         case 0x14:
                             ParseDisconnectClient(inputMessage);
                             break;
@@ -33,6 +41,7 @@ namespace TibiaCAMDecryptor {
                             ParseWaitList(inputMessage);
                             break;
                         case 0x1E:
+                            // client ping
                             break;
                         case 0x64:
                             ParseMapDescription(recording, inputMessage);
@@ -88,6 +97,7 @@ namespace TibiaCAMDecryptor {
                             ParseTradeItemRequest(inputMessage);
                             break;
                         case 0x7F:
+                            // ParseCloseTrade
                             break;
                         case 0x82:
                             ParseWorldLight(inputMessage);
@@ -163,14 +173,14 @@ namespace TibiaCAMDecryptor {
                         case 0xB1:
                             ParseLockRuleViolation(inputMessage);
                             break;
-                        case 0xB4:
-                            ParseTextMessage(inputMessage);
-                            break;
                         case 0xB2:
                             ParseCreatePrivateChannel(inputMessage);
                             break;
                         case 0xB3:
                             ParseClosePrivate(inputMessage);
+                            break;
+                        case 0xB4:
+                            ParseTextMessage(inputMessage);
                             break;
                         case 0xB5:
                             ParseCancelWalk(inputMessage);
@@ -194,130 +204,163 @@ namespace TibiaCAMDecryptor {
                             ParseVIPLogout(inputMessage);
                             break;
                         default:
-                            throw new Exception($"Invalid packet head (maybe different version?) Packet: 0x{packetHead.ToString("X")}|{packetHead}");
+                            throw new Exception($"Invalid packet head (maybe different version?) Packet head: 0x{packetHead.ToString("X2")}|{packetHead}, position: {currentPosition}");
                     }
 
-                    //Console.WriteLine($"Parsed packet: 0x{packetHead:X}|{packetHead}, position: {currentPosition}");
+                    //Console.WriteLine($"Parsed packet: 0x{packetHead:X2} {InputMessage.PacketHeads[packetHead]} {CurrentPacketInfoLog()}, position: {currentPosition}");
                     lastPacketHead = packetHead;
                 }
 
                 //Console.WriteLine($"Finished reading packet, player: {Player.name}, time: {packet.PacketTime}");
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 Console.WriteLine($"Corrupted packet: {ex.Message}, time: {packet.PacketTime}, packet: {packet}");
                 recording.HasProblem = true;
             }
         }
 
-        private static void ParseDisconnectClient(InputMessage input) {
+        private static void ParseDisconnectClient(InputMessage input)
+        {
             input.getString();
         }
 
-        private static void ParseWaitList(InputMessage input) {
+        private static void ParseWaitList(InputMessage input)
+        {
             input.getString();
             input.getByte();
         }
 
-        private static void ParseRuleViolationsChannel(InputMessage input) {
+        private static void ParseRuleViolationsChannel(InputMessage input)
+        {
             ushort size = input.getU16();
         }
 
-        private static void ParseRemoveReport(InputMessage input) {
+        private static void ParseRemoveReport(InputMessage input)
+        {
             input.getString();
         }
 
-        private static void ParsesRuleViolationCancel(InputMessage input) {
+        private static void ParsesRuleViolationCancel(InputMessage input)
+        {
             input.getString();
         }
 
-        private static void ParseLockRuleViolation(InputMessage input) {
-            
+        private static void ParseLockRuleViolation(InputMessage input)
+        {
+
         }
 
-        private static void ParseHouseWindow(InputMessage input) {
+        private static void ParseHouseWindow(InputMessage input)
+        {
             input.getByte();
             input.getU32();
             input.getString();
         }
 
-        private static void ParseClosePrivate(InputMessage input) {
+        private static void ParseClosePrivate(InputMessage input)
+        {
             input.getU16();
         }
 
-        private static void ParseTradeItemRequest(InputMessage input) {
+        private static void ParseTradeItemRequest(InputMessage input)
+        {
             input.getString();
             byte tradeItemsSize = input.getByte();
-            for (int index = 0; index < tradeItemsSize; index++) {
+            for (int index = 0; index < tradeItemsSize; index++)
+            {
                 GetThing(input);
             }
         }
 
-        private static void ParseCreatePrivateChannel(InputMessage input) {
+        private static void ParseCreatePrivateChannel(InputMessage input)
+        {
             input.getU16();
             input.getString();
         }
 
-        private static void ParseChannelsDialog(InputMessage input) {
+        private static void ParseChannelsDialog(InputMessage input)
+        {
             byte channelsSize = input.getByte();
-            for (int index = 0; index < channelsSize; index++) {
+            for (int index = 0; index < channelsSize; index++)
+            {
                 input.getU16();
                 input.getString();
             }
         }
 
-        private static void ParseChannel(InputMessage input) {
+        private static void ParseChannel(InputMessage input)
+        {
             input.getU16();
             input.getString();
         }
 
-        private static void ParseOutfitWindow(InputMessage input) {
-            input.getOutfit();
-            input.getByte();
-            input.getByte();
+        private static void ParseOutfitWindow(InputMessage input)
+        {
+            var outfit = input.getOutfit();
+            var outfitStart = input.getU16();
+            var outfitEnd = input.getU16();
+
+            CurrentPacketInfo.Add("outfit", outfit.ToString());
+            CurrentPacketInfo.Add("outfitStart", $"{outfitStart}");
+            CurrentPacketInfo.Add("outfitEnd", $"{outfitEnd}");
         }
 
-        private static void ParseTextWindow(InputMessage input) {
+        private static void ParseTextWindow(InputMessage input)
+        {
             input.getU32();
             input.getU16();
             input.getU16();
             var text = input.getString();
+            var text2 = input.getString();
         }
 
-        private static void ParseCreatureSkull(InputMessage input) {
+        private static void ParseCreatureSkull(InputMessage input)
+        {
             input.getU32();
             input.getByte();
         }
 
-        private static void ParseCreatureShield(InputMessage input) {
+        private static void ParseCreatureShield(InputMessage input)
+        {
             input.getU32();
             input.getByte();
         }
 
-        private static void ParseUpdateTile(InputMessage input) {
+        private static void ParseUpdateTile(InputMessage input)
+        {
             Location location = input.getLocation();
             var thingId = input.PeekU16();
 
-            if (thingId == 0xFF01) {
+            if (thingId == 0xFF01)
+            {
                 input.getU16();
-            } else {
+            }
+            else
+            {
                 parseTileDescription(input, location);
                 input.getU16();
             }
         }
 
-        private static void ParseOpenPrivateChannel(InputMessage input) {
+        private static void ParseOpenPrivateChannel(InputMessage input)
+        {
             input.getString();
         }
 
-        private static void ParseCancelWalk(InputMessage input) {
+        private static void ParseCancelWalk(InputMessage input)
+        {
             input.getByte();
         }
 
-        private static void ParseFloorChangeUp(InputMessage input) {
+        private static void ParseFloorChangeUp(InputMessage input)
+        {
             Location myPos = Player.location;
             myPos = new Location(myPos.X, myPos.Y, myPos.Z - 1);
             //Console.WriteLine("Z: " + myPos.Z);
             var tiles = new List<Tile>();
-            if (myPos.Z == 7) {
+            if (myPos.Z == 7)
+            {
                 int skip = 0;
                 parseFloorDescription(input, tiles, myPos.X - 8, myPos.Y - 6, 5, 18, 14, 3, ref skip); //(floor 7 and 6 already set)
                 parseFloorDescription(input, tiles, myPos.X - 8, myPos.Y - 6, 4, 18, 14, 4, ref skip);
@@ -325,7 +368,9 @@ namespace TibiaCAMDecryptor {
                 parseFloorDescription(input, tiles, myPos.X - 8, myPos.Y - 6, 2, 18, 14, 6, ref skip);
                 parseFloorDescription(input, tiles, myPos.X - 8, myPos.Y - 6, 1, 18, 14, 7, ref skip);
                 parseFloorDescription(input, tiles, myPos.X - 8, myPos.Y - 6, 0, 18, 14, 8, ref skip);
-            } else if (myPos.Z > 7) {
+            }
+            else if (myPos.Z > 7)
+            {
                 int skip = 0;
                 parseFloorDescription(input, tiles, myPos.X - 8, myPos.Y - 6, myPos.Z - 2, 18, 14, 3, ref skip);
             }
@@ -334,7 +379,8 @@ namespace TibiaCAMDecryptor {
             Instance.Map.OnMapUpdated(tiles);
         }
 
-        private static void ParseFloorChangeDown(InputMessage input) {
+        private static void ParseFloorChangeDown(InputMessage input)
+        {
             Location myPos = Player.location;
             myPos = new Location(myPos.X, myPos.Y, myPos.Z + 1);
 
@@ -343,7 +389,8 @@ namespace TibiaCAMDecryptor {
             var tiles = new List<Tile>();
 
             int skipTiles = 0;
-            if (myPos.Z == 8) {
+            if (myPos.Z == 8)
+            {
                 int j, i;
                 for (i = myPos.Z, j = -1; i < (int)myPos.Z + 3; ++i, --j)
                     parseFloorDescription(input, tiles, myPos.X - 8, myPos.Y - 6, i, 18, 14, j, ref skipTiles);
@@ -356,63 +403,77 @@ namespace TibiaCAMDecryptor {
             Instance.Map.OnMapUpdated(tiles);
         }
 
-        private static void ParseCreatureOutfit(InputMessage input) {
-            input.getU32();
-            input.getOutfit();
+        private static void ParseCreatureOutfit(InputMessage input)
+        {
+            var id = input.getU32();
+            var outfit = input.getOutfit();
+            CurrentPacketInfo.Add("id", id.ToString());
+            CurrentPacketInfo.Add("outfit", outfit.ToString());
         }
 
-        private static void ParseVIPLogout(InputMessage input) {
+        private static void ParseVIPLogout(InputMessage input)
+        {
             input.getU32();
         }
 
-        private static void ParseChangeSpeed(InputMessage input) {
+        private static void ParseChangeSpeed(InputMessage input)
+        {
             input.getU32();
             input.getU16();
         }
 
-        private static void ParseVIPLogin(InputMessage input) {
+        private static void ParseVIPLogin(InputMessage input)
+        {
             input.getU32();
         }
 
-        private static void ParseUpdateContainerItem(InputMessage input) {
+        private static void ParseUpdateContainerItem(InputMessage input)
+        {
             input.getByte();
             input.getByte();
             GetThing(input);
         }
 
-        private static void ParseDistanceShoot(InputMessage input) {
+        private static void ParseDistanceShoot(InputMessage input)
+        {
             input.getLocation();
             input.getLocation();
             input.getByte();
         }
 
-        private static void ParseAddContainerItem(InputMessage input) {
+        private static void ParseAddContainerItem(InputMessage input)
+        {
             input.getByte();
             GetThing(input);
         }
 
-        private static void ParseRemoveContainerItem(InputMessage input) {
+        private static void ParseRemoveContainerItem(InputMessage input)
+        {
             input.getByte();
             input.getByte();
         }
 
-        private static void ParseCloseContainer(InputMessage input) {
+        private static void ParseCloseContainer(InputMessage input)
+        {
             input.getByte();
         }
 
-        private static void ParseContainer(InputMessage input) {
+        private static void ParseContainer(InputMessage input)
+        {
             input.getByte();
             input.getU16();
             input.getString();
             input.getByte();
             input.getByte();
             byte containerSize = input.getByte();
-            for (int index = 0; index < containerSize; index++) {
+            for (int index = 0; index < containerSize; index++)
+            {
                 GetThing(input);
             }
         }
 
-        private static void ParseRemoveTileItem(InputMessage input) {
+        private static void ParseRemoveTileItem(InputMessage input)
+        {
             Location location = input.getLocation();
             var stack = input.getByte();
 
@@ -420,13 +481,15 @@ namespace TibiaCAMDecryptor {
                 return;
 
             Tile tile = Instance.Map.GetTile(location);
-            if (tile == null) {
+            if (tile == null)
+            {
                 //Console.WriteLine("Remove tile item location not exists");
                 return;
             }
 
             var thing = tile.GetThing(stack);
-            if (thing == null) { // The client will send update tile.
+            if (thing == null)
+            { // The client will send update tile.
                 //Console.WriteLine("Remove tile item stack location not exists");
                 return;
             }
@@ -434,12 +497,14 @@ namespace TibiaCAMDecryptor {
             tile.RemoveThing(stack);
         }
 
-        private static void ParseAddTileItem(InputMessage input) {
+        private static void ParseAddTileItem(InputMessage input)
+        {
             Location location = input.getLocation();
             Thing thing = GetThing(input);
             Tile tile = Instance.Map.GetTile(location);
 
-            if (tile == null) {
+            if (tile == null)
+            {
                 //Console.WriteLine("Add tile item location not exists");
                 return;
             }
@@ -448,12 +513,14 @@ namespace TibiaCAMDecryptor {
             Instance.Map.SetTile(tile);
         }
 
-        private static void ParseCreatureSpeak(InputMessage input) {
+        private static void ParseCreatureSpeak(InputMessage input)
+        {
             input.getU32();
             input.getString();
 
             byte type = input.getByte();
-            switch (type) {
+            switch (type)
+            {
                 case 1:
                 case 2:
                 case 3:
@@ -477,27 +544,21 @@ namespace TibiaCAMDecryptor {
             input.getString();
         }
 
-        private static void ParseAnimatedText(InputMessage input) {
+        private static void ParseAnimatedText(InputMessage input)
+        {
             input.getLocation();
             input.getByte();
             input.getString();
         }
 
-        private static void ParseCreatureHealth(InputMessage input) {
+        private static void ParseCreatureHealth(InputMessage input)
+        {
             input.getU32();
             input.getByte();
         }
 
-        private static void ParseEastMove(InputMessage input) {
-            var location = new Location(Player.location.X + 1, Player.location.Y, Player.location.Z);
-            Player.location = location;
-
-            var tiles = new List<Tile>();
-            GetMapDescription(input, tiles, location.X + 9, location.Y - 6, location.Z, 1, 14);
-            Instance.Map.OnMapUpdated(tiles);
-        }
-
-        private static void ParseNorthMove(InputMessage input) {
+        private static void ParseNorthMove(InputMessage input)
+        {
             var location = new Location(Player.location.X, Player.location.Y - 1, Player.location.Z);
             Player.location = location;
 
@@ -506,7 +567,18 @@ namespace TibiaCAMDecryptor {
             Instance.Map.OnMapUpdated(tiles);
         }
 
-        private static void ParseSouthMove(InputMessage input) {
+        private static void ParseEastMove(InputMessage input)
+        {
+            var location = new Location(Player.location.X + 1, Player.location.Y, Player.location.Z);
+            Player.location = location;
+
+            var tiles = new List<Tile>();
+            GetMapDescription(input, tiles, location.X + 9, location.Y - 6, location.Z, 1, 14);
+            Instance.Map.OnMapUpdated(tiles);
+        }
+
+        private static void ParseSouthMove(InputMessage input)
+        {
             var location = new Location(Player.location.X, Player.location.Y + 1, Player.location.Z);
             Player.location = location;
 
@@ -515,7 +587,8 @@ namespace TibiaCAMDecryptor {
             Instance.Map.OnMapUpdated(tiles);
         }
 
-        private static void ParseWestMove(InputMessage input) {
+        private static void ParseWestMove(InputMessage input)
+        {
             var location = new Location(Player.location.X - 1, Player.location.Y, Player.location.Z);
             Player.location = location;
 
@@ -524,17 +597,20 @@ namespace TibiaCAMDecryptor {
             Instance.Map.OnMapUpdated(tiles);
         }
 
-        private static void ParseCreatureSquare(InputMessage input) {
+        private static void ParseCreatureSquare(InputMessage input)
+        {
             input.getU32();
             input.getByte();
         }
 
-        private static void ParseMoveCreature(InputMessage input) {
+        private static void ParseMoveCreature(InputMessage input)
+        {
             Location oldLocation = input.getLocation();
             var oldStack = input.getByte();
             Location newLocation = input.getLocation();
 
-            if (oldLocation.IsCreature) {
+            if (oldLocation.IsCreature)
+            {
                 var creatureId = oldLocation.GetCretureId(oldStack);
                 Creature creature = new Creature(creatureId);
 
@@ -547,7 +623,9 @@ namespace TibiaCAMDecryptor {
 
                 tile.AddThing(creature);
                 Instance.Map.SetTile(tile);
-            } else {
+            }
+            else
+            {
                 Tile tile = Instance.Map.GetTile(oldLocation);
                 if (tile == null)
                     return;
@@ -568,37 +646,48 @@ namespace TibiaCAMDecryptor {
                 Instance.Map.SetTile(tile);
 
                 //update creature direction
-                if (oldLocation.X > newLocation.X) {
+                if (oldLocation.X > newLocation.X)
+                {
                     creature.LookDirection = Direction.DIRECTION_WEST;
                     creature.TurnDirection = Direction.DIRECTION_WEST;
-                } else if (oldLocation.X < newLocation.X) {
+                }
+                else if (oldLocation.X < newLocation.X)
+                {
                     creature.LookDirection = Direction.DIRECTION_EAST;
                     creature.TurnDirection = Direction.DIRECTION_EAST;
-                } else if (oldLocation.Y > newLocation.Y) {
+                }
+                else if (oldLocation.Y > newLocation.Y)
+                {
                     creature.LookDirection = Direction.DIRECTION_NORTH;
                     creature.TurnDirection = Direction.DIRECTION_NORTH;
-                } else if (oldLocation.Y < newLocation.Y) {
+                }
+                else if (oldLocation.Y < newLocation.Y)
+                {
                     creature.LookDirection = Direction.DIRECTION_SOUTH;
                     creature.TurnDirection = Direction.DIRECTION_SOUTH;
                 }
             }
         }
 
-        private static void ParseUpdateTileItem(InputMessage input) {
+        private static void ParseUpdateTileItem(InputMessage input)
+        {
             Location location = input.getLocation();
             var stack = input.getByte();
             var thing = GetThing(input);
 
-            if (!location.IsCreature) {
+            if (!location.IsCreature)
+            {
                 //get tile
                 Tile tile = Instance.Map.GetTile(location);
-                if (tile == null) {
+                if (tile == null)
+                {
                     //Console.WriteLine("Update tile item location not exists");
                     return;
                 }
 
                 var oldThing = tile.GetThing(stack);
-                if (oldThing == null) {
+                if (oldThing == null)
+                {
                     //Console.WriteLine("Update tile item stack location not exists");
                     return; // the client will send update tile.
                 }
@@ -608,40 +697,48 @@ namespace TibiaCAMDecryptor {
             }
         }
 
-        private static void ParsePlayerIcons(InputMessage input) {
+        private static void ParsePlayerIcons(InputMessage input)
+        {
             input.getByte();
         }
 
-        private static void ParseTextMessage(InputMessage input) {
+        private static void ParseTextMessage(InputMessage input)
+        {
             var a = input.getByte();
             var b = input.getString();
         }
 
-        private static void ParseVIP(InputMessage input) {
+        private static void ParseVIP(InputMessage input)
+        {
             input.getU32();
             input.getString();
             input.getByte();
         }
 
-        private static void ParsePlayerSkills(InputMessage input) {
-            for (int index = 0; index < 7; index++) {
+        private static void ParsePlayerSkills(InputMessage input)
+        {
+            for (int index = 0; index < 7; index++)
+            {
                 input.getByte();
                 input.getByte();
             }
         }
 
-        private static void ParseCreatureLight(InputMessage input) {
+        private static void ParseCreatureLight(InputMessage input)
+        {
             input.getU32();
             input.getByte();
             input.getByte();
         }
 
-        private static void ParseWorldLight(InputMessage input) {
+        private static void ParseWorldLight(InputMessage input)
+        {
             input.getByte();
             input.getByte();
         }
 
-        private static void ParsePlayerStats(InputMessage input) {
+        private static void ParsePlayerStats(InputMessage input)
+        {
             input.getU16();
             input.getU16();
             input.getU16();
@@ -657,32 +754,44 @@ namespace TibiaCAMDecryptor {
             input.getU16();
         }
 
-        private static void ParseInventoryItem(InputMessage input, byte packetHead) {
-            if (packetHead == 0x78) {
+        private static void ParseInventoryItem(InputMessage input, byte packetHead)
+        {
+            if (packetHead == 0x78)
+            {
                 input.getByte();
                 GetItem(input, 65535);
-            } else if (packetHead == 0x79)
+            }
+            else if (packetHead == 0x79)
                 input.getByte();
         }
 
-        private static void ParseMagicEffect(InputMessage input) {
+        private static void ParseMagicEffect(InputMessage input)
+        {
             input.getLocation();
             input.getByte();
         }
 
-        public static void ParseLogin(InputMessage input) {
+        public static void ParseLogin(InputMessage input)
+        {
             input.getU32();
             input.getByte();
             input.getByte();
             byte accessLevel = input.getByte();
-            if (accessLevel == 1) {
+            if (accessLevel == 1)
+            {
                 byte loop = input.getByte();
                 for (byte b = 0; b < 32; b++)
                     input.getByte();
             }
         }
 
-        public static void ParseMapDescription(Recording recording, InputMessage input) {
+        public static void ParseGmActions(InputMessage input)
+        {
+            
+        }
+
+        public static void ParseMapDescription(Recording recording, InputMessage input)
+        {
             Location playerLocation = input.getLocation();
             if (recording.Location == null)
                 recording.Location = playerLocation;
@@ -694,16 +803,20 @@ namespace TibiaCAMDecryptor {
             Instance.Map.OnMapUpdated(tiles);
         }
 
-        public static void GetMapDescription(InputMessage input, List<Tile> tiles, int x, int y, int z, int width, int height) {
+        public static void GetMapDescription(InputMessage input, List<Tile> tiles, int x, int y, int z, int width, int height)
+        {
             int startz, endz, zstep;
             //calculate map limits
             //Console.WriteLine(x + "," + y + "," + z);
 
-            if (z > 7) {
+            if (z > 7)
+            {
                 startz = z - 2;
                 endz = Math.Min(16 - 1, z + 2);
                 zstep = 1;
-            } else {
+            }
+            else
+            {
                 startz = 7;
                 endz = 0;
                 zstep = -1;
@@ -712,41 +825,45 @@ namespace TibiaCAMDecryptor {
             int skipTiles = 0;
             for (int nz = startz; nz != endz + zstep; nz += zstep)
                 parseFloorDescription(input, tiles, x, y, nz, width, height, z - nz, ref skipTiles);
+
         }
 
-        private static void parseFloorDescription(InputMessage message, List<Tile> tiles, int x, int y, int z, int width, int height, int offset, ref int skipTiles) {
-            for (int nx = 0; nx < width; nx++) {
-                for (int ny = 0; ny < height; ny++) {
-                    if (skipTiles == 0) {
+        private static void parseFloorDescription(InputMessage message, List<Tile> tiles, int x, int y, int z, int width, int height, int offset, ref int skipTiles)
+        {
+            for (int nx = 0; nx < width; nx++)
+            {
+                for (int ny = 0; ny < height; ny++)
+                {
+                    if (skipTiles == 0)
+                    {
                         var tileOpt = message.PeekU16();
                         // Decide if we have to skip tiles
                         // or if it is a real tile
-                        if (tileOpt == 0xFF11) {
-                            message.getU16(); // skip 0xFF11
-                            return;
-                        }
-
-                        //Console.WriteLine(tileOpt.ToString("X"));
                         if (tileOpt >= 0xFF00)
+                        {
                             skipTiles = (short)(message.getU16() & 0xFF);
-                        else {
+                        }
+                        else
+                        {
                             //real tile so read tile
                             tiles.Add(parseTileDescription(message, new Location(x + nx + offset, y + ny + offset, z)));
-                            //tiles.Add();
+
                             skipTiles = (short)(message.getU16() & 0xFF);
                         }
-                    } else
+                    }
+                    else
                         skipTiles--;
                 }
             }
         }
 
-        private static Tile parseTileDescription(InputMessage message, Location location) {
+        private static Tile parseTileDescription(InputMessage message, Location location)
+        {
             Tile tile = new Tile(location);
 
             while (message.PeekU16() < 0xFF00)
                 tile.AddThing(GetThing(message, location));
-
+            
             //Console.WriteLine("Tile added: things count = " + tile.things.Count);
             if (Instance.Map.GetTile(location) == null)
                 Instance.Map.SetTile(tile);
@@ -754,7 +871,8 @@ namespace TibiaCAMDecryptor {
             return tile;
         }
 
-        private static Thing GetThing(InputMessage message, Location location = null) {
+        private static Thing GetThing(InputMessage message, Location location = null)
+        {
             //get thing type
             var thingId = message.getU16();
 
@@ -817,7 +935,8 @@ namespace TibiaCAMDecryptor {
                 return GetItem(message, thingId);
         }
 
-        private static Item GetItem(InputMessage message, ushort itemid) {
+        private static Item GetItem(InputMessage message, ushort itemid)
+        {
             //Console.WriteLine("ID: " + itemid);
             if (itemid == ushort.MaxValue)
                 itemid = message.getU16();
@@ -839,10 +958,14 @@ namespace TibiaCAMDecryptor {
 
         public static OtMap map;
 
-        public static void Map_Updated(object sender, MapUpdatedEventArgs e) {
-            try {
-                lock (map) {
-                    foreach (var tile in e.Tiles) {
+        public static void Map_Updated(object sender, MapUpdatedEventArgs e)
+        {
+            try
+            {
+                lock (map)
+                {
+                    foreach (var tile in e.Tiles)
+                    {
                         var index = tile.Location.ToIndex();
 
                         OtTile mapTile = map.GetTile(tile.Location);
@@ -853,21 +976,26 @@ namespace TibiaCAMDecryptor {
 
                         mapTile.Clear();
 
-                        for (int i = 0; i < tile.ThingCount; i++) {
+                        for (int i = 0; i < tile.ThingCount; i++)
+                        {
                             var thing = tile.GetThing(i);
 
-                            if (thing is Creature) {
+                            if (thing is Creature)
+                            {
                                 var creature = thing as Creature;
 
                                 if (creature.Type == CreatureType.PLAYER || (creature.Type == CreatureType.MONSTER) || (creature.Type == CreatureType.NPC))
                                     continue;
 
                                 map.AddCreature(new OtCreature { Id = creature.Id, Location = creature.Location, Name = creature.Name, Type = creature.Type });
-                            } else if (thing is Item) {
+                            }
+                            else if (thing is Item)
+                            {
                                 var item = tile.GetThing(i) as Item;
 
                                 var itemType = Instance.otItems.GetItemBySpriteId((ushort)item.Id);
-                                if (itemType == null) {
+                                if (itemType == null)
+                                {
                                     //Console.WriteLine("Tibia item not in items.otb. Details: item id " + item.Id.ToString());
                                     continue;
                                 }
@@ -886,7 +1014,9 @@ namespace TibiaCAMDecryptor {
                         map.SetTile(mapTile);
                     }
                 }
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 //Console.WriteLine("[Error] Unable to convert tibia tile to open tibia tile. Details: " + ex.Message);
             }
         }

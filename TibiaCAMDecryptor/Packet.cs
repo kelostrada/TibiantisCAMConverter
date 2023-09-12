@@ -26,7 +26,7 @@ namespace TibiaCAMDecryptor {
 
         public override string ToString()
         {
-            return PacketData.Select(i => $"{i:X2}").Aggregate("", (acc, s) => $"{acc} {s}");
+            return PacketData.Select(i => $"{i:X2}").Aggregate("", (acc, s) => $"{acc}, 0x{s}");
         }
     }
 }
