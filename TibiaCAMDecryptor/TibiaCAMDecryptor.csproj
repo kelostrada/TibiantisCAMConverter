@@ -43,6 +43,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MapItem.cs" />
     <Compile Include="Creature.cs" />
     <Compile Include="Crypt.cs" />
     <Compile Include="Direction.cs" />

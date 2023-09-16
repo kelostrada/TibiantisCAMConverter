@@ -18,6 +18,8 @@ namespace TibiaCAMDecryptor {
 
             Instance.items = new Items();
             Instance.items.Load("Tibia.dat", 760);
+
+            int i = 1;
             //get all recordings
             foreach (string filePath in Directory.GetFiles("Recordings")) {
                 if (filePath.EndsWith(".DS_Store")) continue;
@@ -36,7 +38,7 @@ namespace TibiaCAMDecryptor {
                     ProtocolGame.ParsePacket(recording, packet);
                 }
 
-                Console.WriteLine($"Parsed Recording: player: {Player.name}, File: {recording.FilePath}");
+                Console.WriteLine($"Parsed {i++} Recording: player: {Player.name}, File: {recording.FilePath}, tiles: {ProtocolGame.AllTiles[recording.FilePath]?.Count}");
             }
 
             //recordings.Sort((r1, r2) => {
@@ -58,7 +60,7 @@ namespace TibiaCAMDecryptor {
             //    return r1.Time.CompareTo(r2.Time);
             //});
 
-            //Console.WriteLine("Reading map from packets.");
+            Console.WriteLine($"Total tiles: {ProtocolGame.AllTiles.Values.Sum(v => v.Count)}");
 
             Console.WriteLine("Done parsing packets... saving map...");
             ProtocolGame.map.Save(Environment.CurrentDirectory + "/test.otbm");

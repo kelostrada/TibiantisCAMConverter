@@ -6,6 +6,7 @@ namespace TibiaCAMDecryptor
 {
     public class ProtocolGame
     {
+        private static string CurrentRecording;
         private static Dictionary<string, string> CurrentPacketInfo = new Dictionary<string, string>();
 
         private static string CurrentPacketInfoLog()
@@ -15,6 +16,10 @@ namespace TibiaCAMDecryptor
 
         public static void ParsePacket(Recording recording, Packet packet)
         {
+            CurrentRecording = recording.FilePath;
+            if (!AllTiles.ContainsKey(CurrentRecording))
+                AllTiles.Add(CurrentRecording, new Dictionary<Location, List<MapItem>>());
+
             byte[] packetData = packet.GetPacketData();
 
             InputMessage inputMessage = new InputMessage(packetData);
@@ -957,6 +962,7 @@ namespace TibiaCAMDecryptor
         }
 
         public static OtMap map;
+        public static Dictionary<string, Dictionary<Location, List<MapItem>>> AllTiles = new Dictionary<string, Dictionary<Location, List<MapItem>>>();
 
         public static void Map_Updated(object sender, MapUpdatedEventArgs e)
         {
@@ -969,10 +975,18 @@ namespace TibiaCAMDecryptor
                         var index = tile.Location.ToIndex();
 
                         OtTile mapTile = map.GetTile(tile.Location);
-                        if (mapTile != null)
+                        /*if (mapTile != null)
                             continue;
-                        else if (mapTile == null)
+                        else*/ if (mapTile == null)
                             mapTile = new OtTile(tile.Location);
+
+                        var addTile = false;
+
+                        if (!AllTiles[CurrentRecording].ContainsKey(tile.Location))
+                        {
+                            AllTiles[CurrentRecording].Add(tile.Location, new List<MapItem>());
+                            addTile = true;
+                        }
 
                         mapTile.Clear();
 
@@ -1001,13 +1015,21 @@ namespace TibiaCAMDecryptor
                                 }
 
                                 OtItem mapItem = OtItem.Create(itemType);
+                                byte count = 0;
 
                                 if (mapItem.Type.IsStackable)
-                                    mapItem.SetAttribute(OtItemAttribute.COUNT, item.Count);
+                                {
+                                    count = item.Count;
+                                }
                                 else if (mapItem.Type.Group == OtItemGroup.Splash || mapItem.Type.Group == OtItemGroup.FluidContainer)
-                                    mapItem.SetAttribute(OtItemAttribute.COUNT, OtConverter.TibiaFluidToOtFluid(item.SubType));
+                                {
+                                    count = OtConverter.TibiaFluidToOtFluid(item.SubType);
+                                }
 
                                 mapTile.AddItem(mapItem);
+
+                                if (addTile) 
+                                    AllTiles[CurrentRecording][tile.Location].Add(new MapItem((ushort)item.Id, count));
                             }
                         }
 

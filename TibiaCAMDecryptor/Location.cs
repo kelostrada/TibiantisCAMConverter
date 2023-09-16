@@ -53,7 +53,12 @@ namespace TibiaCAMDecryptor {
         }
 
         public override int GetHashCode() {
-            return (x + y + z) ^ 31;
+            int hash = 17;
+            // Suitable nullity checks etc, of course :)
+            hash = hash * 23 + x.GetHashCode();
+            hash = hash * 23 + y.GetHashCode();
+            hash = hash * 23 + z.GetHashCode();
+            return hash;
         }
 
         public override string ToString() {
