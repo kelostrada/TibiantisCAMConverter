@@ -6,7 +6,6 @@ namespace TibiaCAMDecryptor
 {
     public class ProtocolGame
     {
-        private static string CurrentRecording;
         private static Dictionary<string, string> CurrentPacketInfo = new Dictionary<string, string>();
 
         private static string CurrentPacketInfoLog()
@@ -16,10 +15,6 @@ namespace TibiaCAMDecryptor
 
         public static void ParsePacket(Recording recording, Packet packet)
         {
-            CurrentRecording = recording.FilePath;
-            if (!AllTiles.ContainsKey(CurrentRecording))
-                AllTiles.Add(CurrentRecording, new Dictionary<Location, List<MapItem>>());
-
             byte[] packetData = packet.GetPacketData();
 
             InputMessage inputMessage = new InputMessage(packetData);
@@ -962,7 +957,7 @@ namespace TibiaCAMDecryptor
         }
 
         public static OtMap map;
-        public static Dictionary<string, Dictionary<Location, List<MapItem>>> AllTiles = new Dictionary<string, Dictionary<Location, List<MapItem>>>();
+        public static Dictionary<Location, List<MapItem>> AllTiles = new Dictionary<Location, List<MapItem>>();
 
         public static void Map_Updated(object sender, MapUpdatedEventArgs e)
         {
@@ -982,9 +977,9 @@ namespace TibiaCAMDecryptor
 
                         var addTile = false;
 
-                        if (!AllTiles[CurrentRecording].ContainsKey(tile.Location))
+                        if (!AllTiles.ContainsKey(tile.Location))
                         {
-                            AllTiles[CurrentRecording].Add(tile.Location, new List<MapItem>());
+                            AllTiles.Add(tile.Location, new List<MapItem>());
                             addTile = true;
                         }
 
@@ -1029,7 +1024,7 @@ namespace TibiaCAMDecryptor
                                 mapTile.AddItem(mapItem);
 
                                 if (addTile) 
-                                    AllTiles[CurrentRecording][tile.Location].Add(new MapItem((ushort)item.Id, count));
+                                    AllTiles[tile.Location].Add(new MapItem((ushort)item.Id, count));
                             }
                         }
 
@@ -1040,6 +1035,41 @@ namespace TibiaCAMDecryptor
             catch (Exception ex)
             {
                 //Console.WriteLine("[Error] Unable to convert tibia tile to open tibia tile. Details: " + ex.Message);
+            }
+        }
+
+        public static void FillMap(byte[] buffer)
+        {
+            int position = 0;
+
+            while (position < buffer.Length)
+            {
+
+                var x = BitConverter.ToUInt16(buffer, position);
+                position += 2;
+                var y = BitConverter.ToUInt16(buffer, position);
+                position += 2;
+                var z = buffer[position];
+                position += 1;
+
+                var location = new Location(x, y, z);
+                var mapTile = new OtTile(location);
+
+                while (BitConverter.ToUInt16(buffer, position) != 0xFF00)
+                {
+                    var item = BitConverter.ToUInt16(buffer, position);
+                    position += 2;
+                    var count = buffer[position];
+                    position += 1;
+
+                    var itemType = Instance.otItems.GetItemBySpriteId(item);
+                    OtItem mapItem = OtItem.Create(itemType);
+                    mapItem.SetAttribute(OtItemAttribute.COUNT, count);
+                    mapTile.AddItem(mapItem);
+                }
+                position += 2;
+
+                map.SetTile(mapTile);
             }
         }
     }
