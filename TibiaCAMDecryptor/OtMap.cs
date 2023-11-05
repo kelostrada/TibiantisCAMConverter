@@ -67,13 +67,11 @@ namespace TibiaCAMDecryptor {
 
         private Dictionary<uint, OtTown> towns;
         private Dictionary<ulong, OtTile> tiles;
+        private Dictionary<ulong, int> tileVisits;
         private Dictionary<uint, OtCreature> creatures;
+        private Dictionary<string, Dictionary<ulong, int>> cumulatedMonsters;
+        private Dictionary<string, Dictionary<ulong, int>> cumulatedNpcs;
         private Dictionary<ulong, OtSpawn> spawns;
-        private ISet<string> npcs;
-
-        private int npcCount;
-        private int monsterCount;
-        private uint loadCreatureId;
 
         public uint Version { get; set; }
 
@@ -95,7 +93,9 @@ namespace TibiaCAMDecryptor {
             creatures = new Dictionary<uint, OtCreature>();
             spawns = new Dictionary<ulong, OtSpawn>();
             towns = new Dictionary<uint, OtTown>();
-            npcs = new HashSet<string>();
+            tileVisits = new Dictionary<ulong, int>();
+            cumulatedMonsters = new Dictionary<string, Dictionary<ulong, int>>();
+            cumulatedNpcs = new Dictionary<string, Dictionary<ulong, int>>();
 
             Version = 2;
             Width = 0xFCFC;
@@ -133,25 +133,22 @@ namespace TibiaCAMDecryptor {
             SetTile(tile.Location.ToIndex(), tile);
         }
 
+        public void VisitTile(Location location)
+        {
+            ulong index = location.ToIndex();
+            if (tileVisits.ContainsKey(index))
+            {
+                tileVisits[index]++;
+            }
+            else
+            {
+                tileVisits[index] = 1;
+            }
+        }
+
         public void AddCreature(OtCreature creature) {
             if (!creatures.ContainsKey(creature.Id)) {
-                var spawnLocation = new Location(creature.Location.X - (creature.Location.X % SPAWN_SIZE) + SPAWN_RADIUS,
-                    creature.Location.Y - (creature.Location.Y % SPAWN_SIZE) + SPAWN_RADIUS, creature.Location.Z);
-                var spawnIndex = spawnLocation.ToIndex();
-
-                if (!spawns.ContainsKey(spawnIndex))
-                    spawns.Add(spawnIndex, new OtSpawn(spawnLocation, SPAWN_RADIUS));
-
-                var spwan = spawns[spawnIndex];
-
-                if (spwan.AddCreature(creature)) {
-                    if (creature.Type == CreatureType.NPC)
-                        npcCount++;
-                    else if (creature.Type == CreatureType.MONSTER)
-                        monsterCount++;
-
-                    creatures.Add(creature.Id, creature);
-                }
+                creatures.Add(creature.Id, creature);
             }
         }
 
@@ -159,19 +156,64 @@ namespace TibiaCAMDecryptor {
         public IEnumerable<OtSpawn> Spawns { get { return spawns.Values; } }
 
         public int TileCount { get { return tiles.Count; } }
-        public int NpcCount { get { return npcCount; } }
-        public int MonsterCount { get { return monsterCount; } }
 
         public void Clear() {
             lock (this) {
                 tiles.Clear();
                 spawns.Clear();
                 creatures.Clear();
-
-                monsterCount = 0;
-                npcCount = 0;
+                tileVisits.Clear();
             }
         }
+
+        public void CumulateSpawns()
+        {
+            lock (this)
+            {
+                foreach (var creature in creatures.Values)
+                {
+                    var index = creature.Location.ToIndex();
+
+                    if (creature.Type == CreatureType.NPC)
+                    {
+                        if (!cumulatedNpcs.ContainsKey(creature.Name))
+                        {
+                            cumulatedNpcs[creature.Name] = new Dictionary<ulong, int>();
+                        }
+
+                        if (!cumulatedNpcs[creature.Name].ContainsKey(index))
+                        {
+                            cumulatedNpcs[creature.Name][index] = 1;
+                        }
+                        else
+                        {
+                            cumulatedNpcs[creature.Name][index]++;
+                        }
+                    }
+
+                    if (creature.Type == CreatureType.MONSTER)
+                    {
+                        if (!cumulatedMonsters.ContainsKey(creature.Name))
+                        {
+                            cumulatedMonsters[creature.Name] = new Dictionary<ulong, int>();
+                        }
+
+                        if (!cumulatedMonsters[creature.Name].ContainsKey(index))
+                        {
+                            cumulatedMonsters[creature.Name][index] = 1;
+                        }
+                        else
+                        {
+                            cumulatedMonsters[creature.Name][index]++;
+                        }
+                    }
+                }
+
+
+                creatures.Clear();
+            }
+        }
+
 
         #region Save
 

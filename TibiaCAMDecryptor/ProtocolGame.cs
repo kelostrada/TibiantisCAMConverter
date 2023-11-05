@@ -846,7 +846,9 @@ namespace TibiaCAMDecryptor
                         else
                         {
                             //real tile so read tile
-                            tiles.Add(parseTileDescription(message, new Location(x + nx + offset, y + ny + offset, z)));
+                            var location = new Location(x + nx + offset, y + ny + offset, z);
+                            tiles.Add(parseTileDescription(message, location));
+                            map.VisitTile(location);
 
                             skipTiles = (short)(message.getU16() & 0xFF);
                         }
@@ -896,13 +898,19 @@ namespace TibiaCAMDecryptor
                     uint creatureId = message.getU32();
                     //Console.WriteLine("Removing creature: " + creatureId);
                     uint creatureIdNew = message.getU32();
-                    creature = new Creature(creatureIdNew);
-                    creature.Name = message.getString();
+                    string name = message.getString();
+                    creature = new Creature(creatureIdNew, name);
                     creature.Health = message.getByte();
 
                     if (Player.location.Equals(location))
                     {
                         Player.name = creature.Name;
+                    }
+
+                    // location is not null only when parsing tile description
+                    if (location != null)
+                    {
+
                     }
                 }
 
@@ -993,7 +1001,7 @@ namespace TibiaCAMDecryptor
                             {
                                 var creature = thing as Creature;
 
-                                if (creature.Type == CreatureType.PLAYER || (creature.Type == CreatureType.MONSTER) || (creature.Type == CreatureType.NPC))
+                                if (creature.Type == CreatureType.PLAYER || creature.Name == null)
                                     continue;
 
                                 map.AddCreature(new OtCreature { Id = creature.Id, Location = creature.Location, Name = creature.Name, Type = creature.Type });

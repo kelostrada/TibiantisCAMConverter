@@ -5,6 +5,12 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace TibiaCAMDecryptor {
+
+    public static class CreaturesIdRange {
+        public static uint PlayerStartId = 0x00000000;
+        public static uint NpcStartId = 0x40000000;
+    }
+
     public enum CreatureType : byte {
         PLAYER = 0,
         MONSTER = 1,
@@ -56,8 +62,23 @@ namespace TibiaCAMDecryptor {
 
         public Outfit Outfit { get; set; }
 
-        public Creature(uint id) {
+        public Creature(uint id) : this(id, null)
+        {
+            
+        }
+
+        public Creature(uint id, string name) {
             this.id = id;
+            Name = name;
+
+            if (id >= CreaturesIdRange.PlayerStartId && id < CreaturesIdRange.NpcStartId)
+            {
+                Type = CreatureType.PLAYER;
+            }
+            else if (id >= CreaturesIdRange.NpcStartId)
+            {
+                Type = (name != null && char.IsUpper(name[0])) ? CreatureType.NPC : CreatureType.MONSTER;
+            }
         }
 
         public override int GetHashCode() {
