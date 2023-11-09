@@ -13,11 +13,11 @@ namespace TibiaCAMDecryptor {
 
         public override bool Equals(object obj) {
             var other = obj as OtCreature;
-            return other != null && other.Id == Id;
+            return other != null && other.Name == Name && other.Location == Location;
         }
 
         public override int GetHashCode() {
-            return Id.GetHashCode();
+            return Name.GetHashCode() + Location.GetHashCode();
         }
     }
 }

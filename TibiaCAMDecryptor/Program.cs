@@ -194,6 +194,7 @@ namespace TibiaCAMDecryptor {
                         ProtocolGame.map.CumulateSpawns();
                     }
 
+                    ProtocolGame.map.AggregateSpawns();
                     ProtocolGame.map.Save(Environment.CurrentDirectory + "/test.otbm");
 
                     break;

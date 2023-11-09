@@ -67,10 +67,10 @@ namespace TibiaCAMDecryptor {
 
         private Dictionary<uint, OtTown> towns;
         private Dictionary<ulong, OtTile> tiles;
-        private Dictionary<ulong, int> tileVisits;
+        private Dictionary<Location, int> tileVisits;
         private Dictionary<uint, OtCreature> creatures;
-        private Dictionary<string, Dictionary<ulong, int>> cumulatedMonsters;
-        private Dictionary<string, Dictionary<ulong, int>> cumulatedNpcs;
+        private Dictionary<string, Dictionary<Location, int>> cumulatedMonsters;
+        private Dictionary<string, Dictionary<Location, int>> cumulatedNpcs;
         private Dictionary<ulong, OtSpawn> spawns;
 
         public uint Version { get; set; }
@@ -93,9 +93,9 @@ namespace TibiaCAMDecryptor {
             creatures = new Dictionary<uint, OtCreature>();
             spawns = new Dictionary<ulong, OtSpawn>();
             towns = new Dictionary<uint, OtTown>();
-            tileVisits = new Dictionary<ulong, int>();
-            cumulatedMonsters = new Dictionary<string, Dictionary<ulong, int>>();
-            cumulatedNpcs = new Dictionary<string, Dictionary<ulong, int>>();
+            tileVisits = new Dictionary<Location, int>();
+            cumulatedMonsters = new Dictionary<string, Dictionary<Location, int>>();
+            cumulatedNpcs = new Dictionary<string, Dictionary<Location, int>>();
 
             Version = 2;
             Width = 0xFCFC;
@@ -135,14 +135,13 @@ namespace TibiaCAMDecryptor {
 
         public void VisitTile(Location location)
         {
-            ulong index = location.ToIndex();
-            if (tileVisits.ContainsKey(index))
+            if (tileVisits.ContainsKey(location))
             {
-                tileVisits[index]++;
+                tileVisits[location]++;
             }
             else
             {
-                tileVisits[index] = 1;
+                tileVisits[location] = 1;
             }
         }
 
@@ -172,22 +171,21 @@ namespace TibiaCAMDecryptor {
             {
                 foreach (var creature in creatures.Values)
                 {
-                    var index = creature.Location.ToIndex();
 
                     if (creature.Type == CreatureType.NPC)
                     {
                         if (!cumulatedNpcs.ContainsKey(creature.Name))
                         {
-                            cumulatedNpcs[creature.Name] = new Dictionary<ulong, int>();
+                            cumulatedNpcs[creature.Name] = new Dictionary<Location, int>();
                         }
 
-                        if (!cumulatedNpcs[creature.Name].ContainsKey(index))
+                        if (!cumulatedNpcs[creature.Name].ContainsKey(creature.Location))
                         {
-                            cumulatedNpcs[creature.Name][index] = 1;
+                            cumulatedNpcs[creature.Name][creature.Location] = 1;
                         }
                         else
                         {
-                            cumulatedNpcs[creature.Name][index]++;
+                            cumulatedNpcs[creature.Name][creature.Location]++;
                         }
                     }
 
@@ -195,16 +193,16 @@ namespace TibiaCAMDecryptor {
                     {
                         if (!cumulatedMonsters.ContainsKey(creature.Name))
                         {
-                            cumulatedMonsters[creature.Name] = new Dictionary<ulong, int>();
+                            cumulatedMonsters[creature.Name] = new Dictionary<Location, int>();
                         }
 
-                        if (!cumulatedMonsters[creature.Name].ContainsKey(index))
+                        if (!cumulatedMonsters[creature.Name].ContainsKey(creature.Location))
                         {
-                            cumulatedMonsters[creature.Name][index] = 1;
+                            cumulatedMonsters[creature.Name][creature.Location] = 1;
                         }
                         else
                         {
-                            cumulatedMonsters[creature.Name][index]++;
+                            cumulatedMonsters[creature.Name][creature.Location]++;
                         }
                     }
                 }
@@ -212,6 +210,74 @@ namespace TibiaCAMDecryptor {
 
                 creatures.Clear();
             }
+        }
+
+        private static int SpawnRange = 3;
+        private static int SpawnRadius = 1;
+
+        public void AggregateSpawns()
+        {
+            var aggregatedSpawns = new Dictionary<OtCreature, float>();
+
+            foreach (var monster in cumulatedMonsters)
+            {
+                var handledTiles = new List<Location>();
+
+                foreach (var tile in monster.Value)
+                {
+                    if (handledTiles.Contains(tile.Key)) continue;
+
+                    handledTiles = walkTiles(tile.Key, tile.Key, SpawnRange, monster, aggregatedSpawns, handledTiles);
+                }
+            }
+
+            foreach (var spawn in aggregatedSpawns)
+            {
+                var creature = spawn.Key;
+                var spawnLocation = creature.Location;
+                var spawnIndex = spawnLocation.ToIndex();
+                // var radius = (int) Math.Floor(Math.Pow(Math.Floor(spawn.Value), 1.0/3));
+                if (!spawns.ContainsKey(spawnIndex))
+                    spawns.Add(spawnIndex, new OtSpawn(spawnLocation, SpawnRadius));
+
+                int spawnCount = spawn.Value > 0.02 ? (int)Math.Ceiling(spawn.Value) : 0;
+
+                for (int i = 0; i < spawnCount; i++)
+                {
+                    spawns[spawnIndex].AddCreature(creature);
+                }
+            }
+        }
+
+        private List<Location> walkTiles(Location location, Location startLocation, int range, KeyValuePair<string, Dictionary<Location, int>> creatureTiles, Dictionary<OtCreature, float> aggregatedSpawns, List<Location> handledTiles)
+        {
+            if (handledTiles.Contains(location)) return handledTiles;
+            
+            if (creatureTiles.Value.ContainsKey(location))
+            {
+                var creature = new OtCreature() { Location = startLocation, Name = creatureTiles.Key, Type = CreatureType.MONSTER };
+                if (!aggregatedSpawns.ContainsKey(creature))
+                {
+                    aggregatedSpawns.Add(creature, creatureTiles.Value[location] / (float)tileVisits[location]);
+                }
+                else
+                {
+                    aggregatedSpawns[creature] += creatureTiles.Value[location] / (float)tileVisits[location];
+                }
+
+                range = SpawnRange;
+            }
+
+            handledTiles.Add(location);
+
+            if (range == 0) return handledTiles;
+
+            handledTiles = walkTiles(new Location(location.X + 1, location.Y, location.Z), startLocation, range - 1, creatureTiles, aggregatedSpawns, handledTiles);
+            handledTiles = walkTiles(new Location(location.X - 1, location.Y, location.Z), startLocation, range - 1, creatureTiles, aggregatedSpawns, handledTiles);
+            handledTiles = walkTiles(new Location(location.X, location.Y + 1, location.Z), startLocation, range - 1, creatureTiles, aggregatedSpawns, handledTiles);
+            handledTiles = walkTiles(new Location(location.X, location.Y - 1, location.Z), startLocation, range - 1, creatureTiles, aggregatedSpawns, handledTiles);
+
+            return handledTiles;
         }
 
 
